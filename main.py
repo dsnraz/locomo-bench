@@ -281,10 +281,8 @@ def main() -> None:
             for speaker, fact_list in facts.items():
                 for entry in fact_list:
                     if isinstance(entry, (list, tuple)):
-                        if len(entry) >= 2:
-                            fact_text, dia_id = entry[0], entry[1]
-                        else:
-                            fact_text, dia_id = str(entry[0]), ""
+                        fact_text = str(entry[0]) if len(entry) >= 1 else ""
+                        dia_id = str(entry[1]) if len(entry) >= 2 else ""
                     else:
                         fact_text, dia_id = str(entry), ""
                     observations.append(fact_text)
