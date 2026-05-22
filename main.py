@@ -122,9 +122,46 @@ def _patched_run_chatgpt_with_examples(query, examples, input, num_gen=1, num_to
         messages.append({"role": "user", "content": inp})
         messages.append({"role": "assistant", "content": out})
     messages.append({"role": "user", "content": input})
-    # 本地模型生成 JSON 需要更多 token，至少 4096
-    return _llm_generate(_patched_model, _patched_tokenizer, _patched_model_type, messages,
-                         max(num_tokens_request, 4096))
+    raw = _llm_generate(_patched_model, _patched_tokenizer, _patched_model_type, messages,
+                        max(num_tokens_request, 4096))
+    # 本地模型可能不遵守 "Escape all double-quote" 指令，手动修复
+    raw = _fix_json_quotes(raw)
+    return raw
+
+
+def _fix_json_quotes(text: str) -> str:
+    """修复 JSON 字符串值内未转义的双引号。"""
+    import json as _json
+    try:
+        _json.loads(text)
+        return text
+    except _json.JSONDecodeError:
+        pass
+    # 状态机：找出 JSON 字符串内部的 " 并替换为 '
+    for _fence in ('```json', '```'):
+        text = text.replace(_fence, '')
+    chars = list(text.strip())
+    in_string = False
+    i = 0
+    while i < len(chars):
+        ch = chars[i]
+        if ch == '\\' and in_string:
+            i += 2  # 跳过转义字符
+            continue
+        if ch == '"':
+            if not in_string:
+                in_string = True
+            else:
+                # 检查下一个非空白字符是否是 JSON 结构字符
+                j = i + 1
+                while j < len(chars) and chars[j] in ' \t\r':
+                    j += 1
+                if j < len(chars) and chars[j] in ':,\n]}]':
+                    in_string = False  # 合法的字符串结束
+                else:
+                    chars[i] = "'"  # 字符串内部的 " → 单引号
+        i += 1
+    return ''.join(chars)
 
 
 # ─── Monkey-patch 嵌入 ──────────────────────────────────────────────────
