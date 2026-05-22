@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import pickle
 import sys
 import warnings
@@ -105,12 +106,15 @@ def _llm_generate(model, tokenizer, model_type: str, messages: List[Dict], max_t
 _patched_model = None
 _patched_tokenizer = None
 _patched_model_type = None
+_api_handler = None  # "openai" 或 None
 
 
 def _patched_run_chatgpt(query, num_gen=1, num_tokens_request=1000, model="chatgpt",
                          use_16k=False, temperature=1.0, wait_time=1):
-    """替换 global_methods.run_chatgpt：用本地模型生成。"""
+    """替换 global_methods.run_chatgpt：本地模型或 API。"""
     messages = [{"role": "user", "content": query}]
+    if _api_handler is not None:
+        return _api_handler.generate(query, max_new_tokens=num_tokens_request)
     return _llm_generate(_patched_model, _patched_tokenizer, _patched_model_type, messages, num_tokens_request)
 
 
@@ -133,6 +137,23 @@ def _fix_json_quotes(text: str) -> str:
     """用 json_repair 库修复 LLM 输出的各种 JSON 格式问题。"""
     from json_repair import repair_json
     return repair_json(text)
+
+
+# ─── API 生成器（OpenAI 兼容）─────────────────────────────────────────────
+
+class _APIHandler:
+    def __init__(self, api_base: str, api_key: str | None = None):
+        import openai as _openai
+        self._client = _openai.OpenAI(base_url=api_base, api_key=api_key or os.environ.get("OPENAI_API_KEY"))
+
+    def generate(self, prompt: str, max_new_tokens: int = 1000) -> str:
+        resp = self._client.chat.completions.create(
+            model="deepseek-chat",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=max_new_tokens,
+            temperature=0.0,
+        )
+        return resp.choices[0].message.content
 
 
 # ─── Monkey-patch 嵌入 ──────────────────────────────────────────────────
@@ -168,6 +189,10 @@ def parse_args() -> argparse.Namespace:
     # 运行控制
     p.add_argument("--max-samples", type=int, default=100000000)
     p.add_argument("--device", type=str, default="auto")
+    p.add_argument("--generation-handler-type", type=str, default="transformers",
+                   choices=("transformers", "openai"))
+    p.add_argument("--generation-api-base", type=str, default="https://api.deepseek.com")
+    p.add_argument("--generation-api-key", type=str, default=None)
     p.add_argument("--use-rag", action="store_true", default=True)
     p.add_argument("--batch-size", type=int, default=1)
     p.add_argument("--model", type=str, default="gpt-3.5-turbo",  # tiktoken 需要合法模型名
@@ -180,7 +205,7 @@ def parse_args() -> argparse.Namespace:
 # ─── 主流程 ──────────────────────────────────────────────────────────────
 
 def main() -> None:
-    global _patched_model, _patched_tokenizer, _patched_model_type, _embedding_model
+    global _patched_model, _patched_tokenizer, _patched_model_type, _embedding_model, _api_handler
     args = parse_args()
 
     # 确保 emb_dir 和 prompt_dir 存在
@@ -283,13 +308,15 @@ def main() -> None:
     print("Phase 2: QA 生成（生成模型）")
     print("=" * 60)
 
-    # 加载生成模型（如果和提取模型不同路径）
-    if args.generation_model_path and args.generation_model_path != args.extraction_model_path:
+    # 加载生成模型
+    if args.generation_handler_type == "openai":
+        _api_handler = _APIHandler(args.generation_api_base, args.generation_api_key)
+        print(f"[API 生成] {args.generation_api_base}")
+    elif args.generation_model_path and args.generation_model_path != args.extraction_model_path:
         _patched_model, _patched_tokenizer, _patched_model_type = _load_local_model(
             args.generation_model_path, args.device
         )
     elif args.generation_model_path:
-        # 同路径，重新加载
         _patched_model, _patched_tokenizer, _patched_model_type = _load_local_model(
             args.generation_model_path, args.device
         )
