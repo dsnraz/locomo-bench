@@ -18,10 +18,10 @@ cd /share/home/leiyh5/locomo-bench
 
 python main.py \
   --data-file /share/home/leiyh5/Memory/data/locomo/locomo10.json \
-  --out-file /share/home/leiyh5/locomo-bench/data/locomo10_obs_rag_pred.json \
+  --out-file /share/home/leiyh5/locomo-bench/data/locomo10_obs_rag_pred_qwen.json \
   --prediction-key observation_rag_prediction \
   --extraction-model-path /share/home/leiyh5/models/Qwen2.5-7B-Instruct \
-  --generation-model-path /share/home/leiyh5/models/Llama-3.2-3B-Instruct \
+  --generation-model-path /share/home/leiyh5/models/Qwen2.5-7B-Instruct \
   --embedding-model sentence-transformers/all-mpnet-base-v2 \
   --rag-mode observation \
   --top-k 10 \
