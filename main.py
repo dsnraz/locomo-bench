@@ -157,7 +157,12 @@ def _fix_json_quotes(text: str) -> str:
                 while j < len(chars) and chars[j] in ' \t\r':
                     j += 1
                 if j < len(chars) and chars[j] in ':,\n]}]':
-                    in_string = False  # 合法的字符串结束
+                    # 引号前是字母/数字 → 内容内部的 "，不是字符串结束
+                    prev = chars[i - 1] if i > 0 else ''
+                    if prev.isalnum():
+                        chars[i] = "'"
+                    else:
+                        in_string = False
                 else:
                     chars[i] = "'"  # 字符串内部的 " → 单引号
         i += 1
