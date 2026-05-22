@@ -300,6 +300,10 @@ def main() -> None:
         sid = sample.get("sample_id", f"index_{si}")
         print(f"\n样本 {sid} ({si + 1}/{n_samples})")
         out_sample: Dict[str, Any] = {"sample_id": sid, "qa": [dict(q) for q in (sample.get("qa") or [])]}
+        # cat-5 对抗性问题：答案可能在 adversarial_answer 字段中
+        for _qa in out_sample["qa"]:
+            if _qa.get("category") == 5 and "answer" not in _qa:
+                _qa["answer"] = _qa.get("adversarial_answer", "")
         out_sample = get_gpt_answers(sample, out_sample, args.prediction_key, args)
         output_samples.append(out_sample)
 
