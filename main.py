@@ -89,7 +89,8 @@ def _llm_generate(model, tokenizer, model_type: str, messages: List[Dict], max_t
         inputs = {k: v.to(model.device) for k, v in inputs.items()}
 
     with torch.no_grad():
-        outputs = model.generate(**inputs, max_new_tokens=max_tokens, do_sample=False,
+        outputs = model.generate(**inputs, max_new_tokens=max_tokens, max_length=32768,
+                                 do_sample=False,
                                  pad_token_id=tokenizer.pad_token_id, eos_token_id=tokenizer.eos_token_id)
     response = tokenizer.decode(outputs[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True).strip()
     if model_type == "deepseek" and "</think>" in response:
