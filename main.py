@@ -89,7 +89,7 @@ def _llm_generate(model, tokenizer, model_type: str, messages: List[Dict], max_t
         inputs = {k: v.to(model.device) for k, v in inputs.items()}
 
     with torch.no_grad():
-        outputs = model.generate(**inputs, max_new_tokens=max_tokens, max_length=32768,
+        outputs = model.generate(**inputs, max_new_tokens=max_tokens,
                                  do_sample=False,
                                  pad_token_id=tokenizer.pad_token_id, eos_token_id=tokenizer.eos_token_id)
     response = tokenizer.decode(outputs[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True).strip()
@@ -178,16 +178,10 @@ def main() -> None:
     # 确保 emb_dir 和 prompt_dir 存在
     Path(args.emb_dir).mkdir(parents=True, exist_ok=True)
 
-    # 1. 加载本地模型 & 嵌入模型
+    # 1. 加载嵌入模型 + 提取模型（Phase 1 用）
     if args.extraction_model_path:
         _patched_model, _patched_tokenizer, _patched_model_type = _load_local_model(
             args.extraction_model_path, args.device
-        )
-
-    gen_model = gen_tokenizer = gen_model_type = None
-    if args.generation_model_path and args.generation_model_path != args.extraction_model_path:
-        gen_model, gen_tokenizer, gen_model_type = _load_local_model(
-            args.generation_model_path, args.device
         )
 
     from sentence_transformers import SentenceTransformer
@@ -221,23 +215,28 @@ def main() -> None:
 
     dataset_prefix = data_path.stem
     n_samples = min(len(samples), max(1, args.max_samples))
-    output_samples: List[Dict[str, Any]] = []
+
+    # ── Phase 1: 提取（只用提取模型）────────────────────────────────
+    print("\n" + "=" * 60)
+    print("Phase 1: 事实提取 + 嵌入（提取模型）")
+    print("=" * 60)
 
     for si in range(n_samples):
         sample = samples[si]
         sid = sample.get("sample_id", f"index_{si}")
-        print(f"\n{'='*60}\n样本 {sid} ({si + 1}/{n_samples})\n{'='*60}")
+        print(f"\n样本 {sid} ({si + 1}/{n_samples})")
 
-        # ── 步骤 A: 生成 observations（调 locomo get_session_facts）──
-        print("提取 observations ...")
+        pkl_path = Path(args.emb_dir) / f"{dataset_prefix}_observation_{sid}.pkl"
+        if pkl_path.exists():
+            print("  已有缓存，跳过")
+            continue
+
         conversation = sample.get("conversation", {})
         session_nums = sorted(
             int(k.split("_")[-1]) for k in conversation
             if k.startswith("session_") and "date_time" not in k
         )
-        observations = []
-        date_times = []
-        context_ids = []
+        observations, date_times, context_ids = [], [], []
 
         for sess_idx in session_nums:
             facts = get_session_facts(args, conversation, conversation, sess_idx, return_embeddings=False)
@@ -248,27 +247,45 @@ def main() -> None:
                     context_ids.append(dia_id)
                     date_times.append(dt)
 
-        # ── 步骤 B: 嵌入 observations → 写 pickle（调 patched get_embeddings）──
-        print(f"嵌入 {len(observations)} 条 observations ...")
-        emb_inputs = [f"{dt}. {obs}" for dt, obs in zip(date_times, observations)] if args.rag_mode == "observation" else observations
+        print(f"  嵌入 {len(observations)} 条 observations ...")
+        emb_inputs = [f"{dt}. {obs}" for dt, obs in zip(date_times, observations)]
         import task_eval.rag_utils as rag_utils
         embeddings = rag_utils.get_embeddings(args.retriever, emb_inputs, "context")
 
-        pkl_path = Path(args.emb_dir) / f"{dataset_prefix}_observation_{sid}.pkl"
         with open(pkl_path, "wb") as f:
             pickle.dump({
-                "embeddings": embeddings,
-                "date_time": date_times,
-                "dia_id": context_ids,
-                "context": observations,
+                "embeddings": embeddings, "date_time": date_times,
+                "dia_id": context_ids, "context": observations,
             }, f)
 
-        # ── 步骤 C: 切换生成模型（如果和提取模型不同）──
-        if gen_model is not None:
-            _patched_model, _patched_tokenizer, _patched_model_type = gen_model, gen_tokenizer, gen_model_type
+    # 释放提取模型
+    if _patched_model is not None:
+        del _patched_model, _patched_tokenizer
+        _patched_model = _patched_tokenizer = None
+        torch.cuda.empty_cache()
+        print("\n提取模型已卸载")
 
-        # ── 步骤 D: QA（调 locomo get_gpt_answers）──
-        print("QA 生成 ...")
+    # ── Phase 2: QA（加载生成模型）─────────────────────────────────
+    print("\n" + "=" * 60)
+    print("Phase 2: QA 生成（生成模型）")
+    print("=" * 60)
+
+    # 加载生成模型（如果和提取模型不同路径）
+    if args.generation_model_path and args.generation_model_path != args.extraction_model_path:
+        _patched_model, _patched_tokenizer, _patched_model_type = _load_local_model(
+            args.generation_model_path, args.device
+        )
+    elif args.generation_model_path:
+        # 同路径，重新加载
+        _patched_model, _patched_tokenizer, _patched_model_type = _load_local_model(
+            args.generation_model_path, args.device
+        )
+
+    output_samples: List[Dict[str, Any]] = []
+    for si in range(n_samples):
+        sample = samples[si]
+        sid = sample.get("sample_id", f"index_{si}")
+        print(f"\n样本 {sid} ({si + 1}/{n_samples})")
         out_sample: Dict[str, Any] = {"sample_id": sid, "qa": [dict(q) for q in (sample.get("qa") or [])]}
         out_sample = get_gpt_answers(sample, out_sample, args.prediction_key, args)
         output_samples.append(out_sample)
