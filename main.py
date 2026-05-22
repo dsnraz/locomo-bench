@@ -168,7 +168,7 @@ def load_embedding_model(embedding_model: str, device: str = "auto"):
     from sentence_transformers import SentenceTransformer
     dev = None if device == "auto" else device
     print(f"加载嵌入模型: {embedding_model}")
-    model = SentenceTransformer(embedding_model, device=dev)
+    model = SentenceTransformer(embedding_model, device=dev, local_files_only=True)
     dim = model.get_sentence_embedding_dimension()
     print(f"嵌入维度: {dim}")
     return model

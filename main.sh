@@ -1,4 +1,8 @@
 #!/bin/bash
+#SBATCH -p gpu_chen
+#SBATCH -n 1
+#SBATCH -G 1
+#SBATCH -o job.out
 # Summary RAG 预测脚本
 # 对标 hyperbolic_memory 的 scripts/main.sh 参数风格
 #
@@ -12,12 +16,12 @@
 #
 
 source ~/miniconda3/etc/profile.d/conda.sh
-conda activate memory
-cd /share/home/leiyh5/Memory
+conda activate bank
+cd /share/home/leiyh5/locomo-bench
 
-python /path/to/locomo-bench/main.py \
+python main.py \
   --data-file /share/home/leiyh5/Memory/data/locomo/locomo10.json \
-  --out-file /share/home/leiyh5/Memory/data/locomo/locomo10_summary_rag_pred.json \
+  --out-file /share/home/leiyh5/locomo-bench/data/locomo/locomo10_summary_rag_pred.json \
   --prediction-key summary_rag_prediction \
   --extraction-model-path /share/home/leiyh5/models/Qwen2.5-7B-Instruct \
   --extraction-device auto \
