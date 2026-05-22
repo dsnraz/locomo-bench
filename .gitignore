@@ -1,0 +1,16 @@
+# SLURM output
+*.out
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Pickle / model files
+*.pkl
+*.pt
+
+# OS
+.DS_Store
+*.swp
+*.swo
