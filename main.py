@@ -170,7 +170,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--device", type=str, default="auto")
     p.add_argument("--use-rag", action="store_true", default=True)
     p.add_argument("--batch-size", type=int, default=1)
-    p.add_argument("--model", type=str, default="chatgpt",  # 兼容 gpt_utils 内部逻辑
+    p.add_argument("--model", type=str, default="gpt-3.5-turbo",  # tiktoken 需要合法模型名
                    help="传给 gpt_utils 的 model 名，本地模型时用 chatgpt 即可")
     p.add_argument("--retriever", type=str, default="dragon",  # 被 patch 覆盖，仅占位
                    help="嵌入检索器名（被本地嵌入模型覆盖）")
