@@ -121,7 +121,9 @@ def _patched_run_chatgpt_with_examples(query, examples, input, num_gen=1, num_to
         messages.append({"role": "user", "content": inp})
         messages.append({"role": "assistant", "content": out})
     messages.append({"role": "user", "content": input})
-    return _llm_generate(_patched_model, _patched_tokenizer, _patched_model_type, messages, num_tokens_request)
+    # 本地模型生成 JSON 需要更多 token，至少 4096
+    return _llm_generate(_patched_model, _patched_tokenizer, _patched_model_type, messages,
+                         max(num_tokens_request, 4096))
 
 
 # ─── Monkey-patch 嵌入 ──────────────────────────────────────────────────
