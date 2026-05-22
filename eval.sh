@@ -9,15 +9,15 @@
 #
 
 source ~/miniconda3/etc/profile.d/conda.sh
-conda activate memory
-cd /share/home/leiyh5/Memory
+conda activate bank
+cd /share/home/leiyh5/locomo-bench
 
-python /share/home/leiyh5/locomo-bench/scripts/eval/evaluate_locomo_predictions.py \
+python /share/home/leiyh5/Memory/scripts/eval/evaluate_locomo_predictions.py \
   --ann-file /share/home/leiyh5/Memory/data/locomo/locomo10.json \
-  --pred-file /share/home/leiyh5/Memory/data/locomo/locomo10_obs_rag_pred.json \
+  --pred-file /share/home/leiyh5/locomo-bench/data/locomo10_obs_rag_pred.json \
   --prediction-key observation_rag_prediction \
   --model-key observation_rag \
   --locomo-root /share/home/leiyh5/locomo-bench \
-  --scored-file /share/home/leiyh5/Memory/data/locomo/locomo10_obs_rag_scored.json \
-  --stats-file /share/home/leiyh5/Memory/data/locomo/locomo10_obs_rag_stats.json \
+  --scored-file /share/home/leiyh5/locomo-bench/data/locomo10_obs_rag_scored.json \
+  --stats-file /share/home/leiyh5/locomo-bench/data/locomo10_obs_rag_stats.json \
   "$@"
