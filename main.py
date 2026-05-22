@@ -279,7 +279,14 @@ def main() -> None:
             facts = get_session_facts(args, conversation, conversation, sess_idx, return_embeddings=False)
             dt = conversation.get(f"session_{sess_idx}_date_time", "")
             for speaker, fact_list in facts.items():
-                for fact_text, dia_id in fact_list:
+                for entry in fact_list:
+                    if isinstance(entry, (list, tuple)):
+                        if len(entry) >= 2:
+                            fact_text, dia_id = entry[0], entry[1]
+                        else:
+                            fact_text, dia_id = str(entry[0]), ""
+                    else:
+                        fact_text, dia_id = str(entry), ""
                     observations.append(fact_text)
                     context_ids.append(dia_id)
                     date_times.append(dt)
