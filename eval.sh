@@ -1,5 +1,5 @@
 #!/bin/bash
-# Summary RAG 评估脚本
+# Observation RAG 评估脚本
 # 对标 hyperbolic_memory 的 scripts/eval/eval.sh 参数风格
 #
 # 用法:
@@ -12,9 +12,9 @@ conda activate memory
 cd /share/home/leiyh5/Memory
 
 ANNFILE=/share/home/leiyh5/Memory/data/locomo/locomo10.json
-PREDFILE=/share/home/leiyh5/Memory/data/locomo/locomo10_summary_rag_pred.json
-PREDKEY=summary_rag_prediction
-MODELKEY=summary_rag
+PREDFILE=/share/home/leiyh5/Memory/data/locomo/locomo10_obs_rag_pred.json
+PREDKEY=observation_rag_prediction
+MODELKEY=observation_rag
 
 python /path/to/locomo-bench/scripts/eval/evaluate_locomo_predictions.py \
   --ann-file "$ANNFILE" \
@@ -22,6 +22,6 @@ python /path/to/locomo-bench/scripts/eval/evaluate_locomo_predictions.py \
   --prediction-key "$PREDKEY" \
   --model-key "$MODELKEY" \
   --locomo-root /path/to/locomo-bench \
-  --scored-file /share/home/leiyh5/Memory/data/locomo/locomo10_summary_rag_scored.json \
-  --stats-file /share/home/leiyh5/Memory/data/locomo/locomo10_summary_rag_stats.json \
+  --scored-file /share/home/leiyh5/Memory/data/locomo/locomo10_obs_rag_scored.json \
+  --stats-file /share/home/leiyh5/Memory/data/locomo/locomo10_obs_rag_stats.json \
   "$@"
