@@ -1,4 +1,9 @@
 #!/bin/bash
+#SBATCH -p gpu_chen
+#SBATCH -n 1
+#SBATCH -G 1
+#SBATCH -o job_obs_rag.out
+#
 # Observation RAG 预测脚本
 # 对标 hyperbolic_memory 的 scripts/main.sh 参数风格
 #
@@ -6,16 +11,12 @@
 # 支持 llama3.2 / qwen2.5 / deepseek。
 # 嵌入模型与 hymemory 一致：sentence-transformers/all-mpnet-base-v2
 #
-# 用法:
-#   bash main.sh
-#   bash main.sh --top-k 10 --max-samples 3
-#
 
 source ~/miniconda3/etc/profile.d/conda.sh
 conda activate memory
 cd /share/home/leiyh5/Memory
 
-python /path/to/locomo-bench/main.py \
+python /share/home/leiyh5/locomo-bench/main.py \
   --data-file /share/home/leiyh5/Memory/data/locomo/locomo10.json \
   --out-file /share/home/leiyh5/Memory/data/locomo/locomo10_obs_rag_pred.json \
   --prediction-key observation_rag_prediction \
