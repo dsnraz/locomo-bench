@@ -191,7 +191,13 @@ def main() -> None:
     print(f"[嵌入模型] {args.embedding_model}")
     _embedding_model = SentenceTransformer(args.embedding_model, device=None if args.device == "auto" else args.device)
 
-    # 2. Monkey-patch
+    # 2. Monkey-patch（先 mock 缺失的可选依赖）
+    import types as _types
+    _dummy_google = _types.ModuleType("google")
+    _dummy_google.__path__ = []
+    _dummy_genai = _types.ModuleType("google.generativeai")
+    sys.modules.setdefault("google", _dummy_google)
+    sys.modules.setdefault("google.generativeai", _dummy_genai)
     import global_methods
     global_methods.run_chatgpt = _patched_run_chatgpt
     global_methods.run_chatgpt_with_examples = _patched_run_chatgpt_with_examples
