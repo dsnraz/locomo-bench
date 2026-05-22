@@ -130,43 +130,9 @@ def _patched_run_chatgpt_with_examples(query, examples, input, num_gen=1, num_to
 
 
 def _fix_json_quotes(text: str) -> str:
-    """修复 JSON 字符串值内未转义的双引号。"""
-    import json as _json
-    try:
-        _json.loads(text)
-        return text
-    except _json.JSONDecodeError:
-        pass
-    # 状态机：找出 JSON 字符串内部的 " 并替换为 '
-    for _fence in ('```json', '```'):
-        text = text.replace(_fence, '')
-    chars = list(text.strip())
-    in_string = False
-    i = 0
-    while i < len(chars):
-        ch = chars[i]
-        if ch == '\\' and in_string:
-            i += 2  # 跳过转义字符
-            continue
-        if ch == '"':
-            if not in_string:
-                in_string = True
-            else:
-                # 检查下一个非空白字符是否是 JSON 结构字符
-                j = i + 1
-                while j < len(chars) and chars[j] in ' \t\r':
-                    j += 1
-                if j < len(chars) and chars[j] in ':,\n]}]':
-                    # 引号前是字母/数字 → 内容内部的 "，不是字符串结束
-                    prev = chars[i - 1] if i > 0 else ''
-                    if prev.isalnum():
-                        chars[i] = "'"
-                    else:
-                        in_string = False
-                else:
-                    chars[i] = "'"  # 字符串内部的 " → 单引号
-        i += 1
-    return ''.join(chars)
+    """用 json_repair 库修复 LLM 输出的各种 JSON 格式问题。"""
+    from json_repair import repair_json
+    return repair_json(text)
 
 
 # ─── Monkey-patch 嵌入 ──────────────────────────────────────────────────
